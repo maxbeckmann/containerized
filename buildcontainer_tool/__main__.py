@@ -4,8 +4,26 @@ import os
 import argparse
 import subprocess
 
+def is_valid_basename(base_name):
+    """Validates if the base name is allowed based on container image naming rules."""
+    # Ensure the base_name is between 1 and 128 characters
+    if not (1 <= len(base_name) <= 128):
+        return False
+    
+    # Ensure each character is either lowercase letter, digit, '-' or '.'
+    for char in base_name:
+        if not (char.islower() or char.isdigit() or char in '-.'):
+            return False
+
+    return True
+
 def find_containerfile(directory, base_name):
     """Searches for a Containerfile based on the provided base name in the specified directory."""
+    
+    # Validate the base_name before proceeding
+    if not is_valid_basename(base_name):
+        raise ValueError(f"Invalid base name: '{base_name}'. Must only contain lowercase letters, digits, dashes, and periods.")
+
     containerfile_path = os.path.join(directory, f"{base_name}.Containerfile")
     if os.path.exists(containerfile_path):
         return containerfile_path
