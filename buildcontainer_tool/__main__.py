@@ -4,18 +4,17 @@ import os
 import argparse
 import subprocess
 
-def find_containerfile(directory):
-    """Searches for a build.Containerfile in the specified directory."""
-    containerfile_path = os.path.join(directory, "build.Containerfile")
+def find_containerfile(directory, base_name):
+    """Searches for a Containerfile based on the provided base name in the specified directory."""
+    containerfile_path = os.path.join(directory, f"{base_name}.Containerfile")
     if os.path.exists(containerfile_path):
         return containerfile_path
     else:
-        raise FileNotFoundError(f"build.Containerfile not found in {directory}")
+        raise FileNotFoundError(f"{base_name}.Containerfile not found in {directory}")
 
-def get_image_name(directory):
-    """Generates a unique image name based on the directory name."""
-    dir_name = os.path.basename(directory)
-    image_name = f"build_{dir_name}:latest"
+def get_image_name(base_name):
+    """Generates a unique image name based on the base name."""
+    image_name = f"build_{base_name}:latest"
     return image_name
 
 def build_podman_image(containerfile_path, context_directory, image_name):
@@ -40,12 +39,12 @@ def build_podman_image(containerfile_path, context_directory, image_name):
         full_output.append(line)  # Collect all output
         
         if step:
-        # Check for cache usage in steps beyond STEP 1/n
+            # Check for cache usage in steps beyond STEP 1/n
             if "--> Using cache" not in line and not step.startswith("STEP 1/"):
                 cache_used = False  # A step beyond STEP 1 is not using the cache, trigger full output
                 break
             elif step.startswith("STEP 1/") and not line.startswith("STEP"):
-                cache_used = False # STEP 1 triggered a download
+                cache_used = False  # STEP 1 triggered a download
                 break
 
         # If the line starts with "STEP ", it indicates the beginning of a new step
@@ -55,7 +54,6 @@ def build_podman_image(containerfile_path, context_directory, image_name):
             step = None
 
     # Print output in real-time if the cache is not used after STEP 1
-    # If the image was fully built from cache beyond STEP 1, suppress the output and show a summary
     if not cache_used:
         print(f"Building image from {containerfile_path} as {image_name}:")
         print("".join(full_output), end="")
@@ -72,9 +70,9 @@ def build_podman_image(containerfile_path, context_directory, image_name):
             print(line, end="")
         raise RuntimeError(f"Failed to build image {image_name}.")
 
-def run_podman_container(image_name, mount_directory, interactive=False):
-    """Runs a Podman container using subprocess, mounting the directory."""
-
+def run_podman_container(image_name, mount_directory, additional_args=None, entrypoint=None):
+    """Runs a Podman container using subprocess, mounting the directory and passing additional arguments."""
+    
     current_uid = os.getuid()
     current_gid = os.getgid()
 
@@ -84,10 +82,16 @@ def run_podman_container(image_name, mount_directory, interactive=False):
         "-v", f"{mount_directory}:/mnt",  # Mount the directory
     ]
 
-    if interactive:
-        run_command += ["-it", "--entrypoint", "/bin/sh"]  # Interactive terminal with shell
-    
-    run_command.append(image_name)  # Run the default command of the image
+    if entrypoint:
+        run_command += [
+            "--entrypoint", entrypoint, 
+            "-it"
+        ]
+
+    run_command.append(image_name)  # Add the image name at the end
+
+    if additional_args:
+        run_command += additional_args
     
     # Execute the Podman run command
     print(f"{mount_directory} is mounted at /mnt")
@@ -105,23 +109,32 @@ def prune_image(image_name):
         print(f"Error pruning image {image_name}: {result.stderr}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Build and run Podman containers from Containerfile.")
+    parser = argparse.ArgumentParser(description="Build and run Podman containers from a Containerfile.")
     
-    # Global arguments
+    # Positional argument for the base name of the Containerfile
+    parser.add_argument("base_name", help="Base name for the .Containerfile")
+    
+    # Global argument for directory
     parser.add_argument(
         "-d", "--directory", 
-        help="Directory to search for build.Containerfile and use as context. Defaults to current directory.", 
+        help="Directory to search for the Containerfile and use as context. Defaults to current directory.", 
         default=os.getcwd()
     )
 
-    # Subcommands: build, shell, and prune
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    # Flag for shell mode, with optional binary path for the entry point
+    parser.add_argument(
+        "--shell", nargs="?", const="/bin/sh", 
+        help="Run an interactive shell in the container. Optionally specify a binary as the entry point."
+    )
 
-    build_parser = subparsers.add_parser("build", help="Build and run the default command in the container.")
-    
-    shell_parser = subparsers.add_parser("shell", help="Build and run an interactive shell in the container.")
-    
-    prune_parser = subparsers.add_parser("prune", help="Prune (remove) the image created by the tool.")
+    # Subcommand: prune (to remove the image)
+    parser.add_argument(
+        "--prune", action="store_true", 
+        help="Prune (remove) the image created by the tool."
+    )
+
+    # Additional arguments to pass to the container
+    parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments to pass to the container.")
 
     args = parser.parse_args()
 
@@ -133,24 +146,24 @@ def main():
     
     try:
         # Step 1: Find the Containerfile
-        containerfile_path = find_containerfile(directory)
+        containerfile_path = find_containerfile(directory, args.base_name)
         
         # Step 2: Generate the image name
-        image_name = get_image_name(directory)
+        image_name = get_image_name(args.base_name)
         
-        # Step 3: Execute the command based on the user's choice
-        if args.command == "build":
-            # Build the image and run container with the default command
-            build_podman_image(containerfile_path, directory, image_name)
-            run_podman_container(image_name, directory)
-        elif args.command == "shell":
-            # Build the image and run container with an interactive shell
-            build_podman_image(containerfile_path, directory, image_name)
-            run_podman_container(image_name, directory, interactive=True)
-        elif args.command == "prune":
+        if args.prune:
             # Prune (remove) the image
             prune_image(image_name)
-    
+        else:
+            # Step 3: Build the image
+            build_podman_image(containerfile_path, directory, image_name)
+            
+            # Step 4: Run the container with the optional shell flag or passed arguments
+            if args.shell:
+                run_podman_container(image_name, directory, entrypoint=args.shell)
+            else:
+                run_podman_container(image_name, directory, additional_args=args.args)
+
     except Exception as e:
         print(f"Error: {e}")
 
