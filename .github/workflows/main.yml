@@ -77,6 +77,12 @@ jobs:
         draft: false
         prerelease: false
 
+    - name: debug
+      id: ls
+      run: |
+        ls -lah .
+        ls -lah dist/
+
     - name: Upload wheel file to release
       uses: actions/upload-release-asset@v1
       with:
