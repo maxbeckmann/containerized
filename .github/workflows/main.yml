@@ -53,10 +53,16 @@ jobs:
         git push -f origin "v$VERSION"
     
     - name: Delete existing GitHub release if it exists
-      uses: softprops/delete-release@v1
-      with:
-        tag_name: "v${{ env.VERSION }}"
-      continue-on-error: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VERSION: ${{ env.VERSION }}
+      run: |
+        gh auth login --with-token <<< "$GITHUB_TOKEN"
+        if gh release view "v$VERSION" >/dev/null 2>&1; then
+          gh release delete "v$VERSION" -y
+        else
+          echo "Release for tag v$VERSION not found, skipping delete."
+        fi
     
     - name: Create GitHub release
       id: create_release
