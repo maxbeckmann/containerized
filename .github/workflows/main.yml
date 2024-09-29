@@ -1,0 +1,36 @@
+name: Package for distribution
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        export PATH="$HOME/.local/bin:$PATH"
+    
+    - name: Install Podman
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install podman
+    
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Run your command with Poetry
+      run: poetry run crzd build
