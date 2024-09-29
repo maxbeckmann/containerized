@@ -31,14 +31,10 @@ jobs:
         sudo apt-get update && sudo apt-get -y install podman
 
     - name: Install poetry project dependencies
-      run: |
-        export PATH="$HOME/.local/bin:$PATH"
-        poetry install
+      run: poetry install
 
     - name: Build the project
-      run: |
-        export PATH="$HOME/.local/bin:$PATH"
-        poetry run crzd build
+      run: poetry run crzd build
 
     - name: Extract version and create tag
       id: version_and_tag
