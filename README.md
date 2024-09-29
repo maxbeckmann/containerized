@@ -5,6 +5,8 @@
 
 **Containerized** is a Python tool designed for building and running rootless Podman containers seamlessly. It aims to streamline container workflows by automating the detection of `Containerfile`s, building images, and running containers, also interactively or with custom commands.
 
+The tool establishes and relies on a few conventions around how a container must be organized, so certain things can be assumed safely. Details are available under Conventions below. This repo could be understood as a codification and documentaion of a few habits of mine in the creation and use of containers.   
+
 The initial purpose of this project was to provide a language-agnostic way to create portable build environments but soon proved usefull for any occaisonal task requiring specific tooling. 
 
 ## Installation
@@ -25,7 +27,7 @@ After installation, you can use the CLI commands directly:
 The **Containerized** CLI provides a simple and flexible interface for interacting with Podman containers. Below is a detailed breakdown of how to use it:
 
 ```sh
-containerized <base_name> [-d DIRECTORY] [--shell [ENTRYPOINT]] [--prune] [ARGS...]
+containerized [-d DIRECTORY] [--shell [ENTRYPOINT]] [--prune] <base_name> [ARGS...]
 ```
 
 ### Arguments and Flags
@@ -59,25 +61,19 @@ containerized <base_name> [-d DIRECTORY] [--shell [ENTRYPOINT]] [--prune] [ARGS.
 
 2. **Run an Interactive Shell in the Container**:
    ```sh
-   containerized my_containerfile --shell
+   containerized --shell my_containerfile
    ```
-   This opens an interactive `/bin/sh` shell within the built container. It’s ideal for troubleshooting or exploring the container interactively.
+   This opens an interactive shell within the built container. It’s ideal for troubleshooting or exploring the container interactively.
 
-3. **Specify a Custom Shell**:
+3. **Run the Container with Custom Arguments**:
    ```sh
-   containerized my_containerfile --shell /bin/bash
-   ```
-   Instead of the default `/bin/sh`, you can specify `/bin/bash` or any other shell available in the container.
-
-4. **Run the Container with Custom Arguments**:
-   ```sh
-   containerized my_containerfile -- python script.py --arg value
+   containerized my_containerfile python script.py --arg value
    ```
    This command runs `script.py` within the container with the specified arguments. This is particularly useful for executing scripts or commands immediately after building the image.
 
-5. **Prune the Image After Use**:
+4. **Prune the Image After Use**:
    ```sh
-   containerized my_containerfile --prune
+   containerized --prune my_containerfile
    ```
    This removes the built container image after running, helping to save disk space.
 
@@ -86,7 +82,7 @@ containerized <base_name> [-d DIRECTORY] [--shell [ENTRYPOINT]] [--prune] [ARGS.
 The command `crzd` works identically to `containerized`, providing a more concise alias:
 
 ```sh
-crzd my_containerfile --shell
+crzd .shell my_containerfile
 ```
 
 This command runs the container using an interactive shell but uses a shorter command name for convenience.
@@ -96,6 +92,12 @@ This command runs the container using an interactive shell but uses a shorter co
 - **Invalid Base Name**: The tool validates the `base_name` to ensure it only contains lowercase letters, digits, dashes, and periods. Invalid names will result in an error.
 - **Containerfile Not Found**: If no matching `Containerfile` is found in the specified directory, an error is displayed.
 - **Build Failures**: If the Podman build fails, the full build output is printed to help diagnose the issue.
+
+## Conventions
+
+To work seamlessly, `Containerfile`s should follow these design principles:
+- The directory `containerized` is called on (explicitly through the `-d` flag or implicitly on your current working directory) will be mounted to the container at `/mnt/`. 
+- The shell spawned for interactive usage will be learned from the `SHELL` environment variable. If it is omitted, `/bin/sh` is assumed. 
 
 ## License
 
