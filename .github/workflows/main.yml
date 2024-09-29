@@ -60,7 +60,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         VERSION: ${{ env.VERSION }}
       run: |
-        gh auth login
         if gh release view "v$VERSION" >/dev/null 2>&1; then
           gh release delete "v$VERSION" -y
         else
