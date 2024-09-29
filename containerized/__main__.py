@@ -3,6 +3,35 @@
 import os
 import argparse
 import subprocess
+import json
+
+def get_shell_env(image_name):
+    try:
+        # Run the podman inspect command
+        result = subprocess.run(['podman', 'inspect', image_name], stdout=subprocess.PIPE, check=True)
+        # Load the output into JSON format
+        inspect_data = json.loads(result.stdout)
+        
+        # Find environment variables
+        env_variables = []
+        if inspect_data and 'Config' in inspect_data[0] and 'Env' in inspect_data[0]['Config']:
+            env_variables = inspect_data[0]['Config']['Env']
+        
+        # Find the SHELL variable
+        for var in env_variables:
+            key, value = var.split('=', 1)
+            if key == "SHELL":
+                return value
+        
+        # If SHELL variable is not found
+        return None
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error running podman inspect: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON: {e}")
+        return None
 
 def is_valid_basename(base_name):
     """Validates if the base name is allowed based on container image naming rules."""
@@ -139,10 +168,10 @@ def main():
         default=os.getcwd()
     )
 
-    # Flag for shell mode, with optional binary path for the entry point
+    # Flag for shell mode
     parser.add_argument(
-        "--shell", nargs="?", const="/bin/sh", 
-        help="Run an interactive shell in the container. Optionally specify a binary as the entry point."
+        "--shell", action="store_true",
+        help="Run an interactive shell in the container."
     )
 
     # Subcommand: prune (to remove the image)
@@ -178,7 +207,13 @@ def main():
             
             # Step 4: Run the container with the optional shell flag or passed arguments
             if args.shell:
-                run_podman_container(image_name, directory, entrypoint=args.shell)
+                default_shell = get_shell_env(image_name)
+                
+                # assume sh as a sane default if nothing else is specified
+                if default_shell is None:
+                    default_shell = "/bin/sh"
+                
+                run_podman_container(image_name, directory, entrypoint=default_shell)
             else:
                 run_podman_container(image_name, directory, additional_args=args.args)
 
