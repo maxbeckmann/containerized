@@ -1,16 +1,17 @@
 [tool.poetry]
-name = "buildcontainer"
+name = "containerized"
 version = "0.1.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Max Beckmann"]
 readme = "README.md"
-packages = [{include = "buildcontainer_tool"}]
+packages = [{include = "containerized"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
 
 [tool.poetry.scripts]
-buildcontainer = "buildcontainer_tool.__main__:main"
+containerized = "containerized.__main__:main"
+crzd = "containerized.__main__:main"
 
 [build-system]
 requires = ["poetry-core"]

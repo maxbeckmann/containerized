@@ -32,7 +32,7 @@ def find_containerfile(directory, base_name):
 
 def get_image_name(base_name):
     """Generates a unique image name based on the base name."""
-    image_name = f"build_{base_name}:latest"
+    image_name = f"{base_name}:latest"
     return image_name
 
 def build_podman_image(containerfile_path, context_directory, image_name):
