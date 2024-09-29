@@ -34,7 +34,7 @@ jobs:
         sudo apt-get update
         sudo apt-get -y install podman
     
-    - name: Install dependencies
+    - name: Install poetry project dependencies
       run: poetry install
 
     - name: Run your command with Poetry
@@ -85,5 +85,6 @@ jobs:
 
     - name: Upload wheel file using GitHub CLI
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         VERSION: ${{ env.VERSION }}
       run: gh release upload "v${VERSION}" dist/*.whl
