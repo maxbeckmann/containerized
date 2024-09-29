@@ -1,4 +1,4 @@
-name: Package for distribution
+name: Package, Tag and Release
 
 on:
   push:
@@ -36,3 +36,117 @@ jobs:
 
     - name: Run your command with Poetry
       run: poetry run crzd build
+    
+    - name: Extract version from pyproject.toml
+        id: extract_version
+        run: |
+          VERSION=$(grep -E '^version\s*=' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+    
+    - name: Create and push tag
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Version $VERSION"
+          git push -f origin "v$VERSION"
+    
+    - name: Delete existing GitHub release if it exists
+      uses: softprops/delete-release@v1
+      with:
+        tag_name: "v${{ env.VERSION }}"
+      continue-on-error: true
+    
+    - name: Create GitHub release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: "v${{ env.VERSION }}"
+        release_name: "v${{ env.VERSION }}"
+        draft: false
+        prerelease: false
+
+    - name: Upload wheel file to release
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: dist/*.whl
+        asset_name: containerized_v${{ env.VERSION }}.whl
+        asset_content_type: application/octet-stream
+
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        export PATH="$HOME/.local/bin:$PATH"
+
+    - name: Extract project version from pyproject.toml
+      id: get_version
+      run: |
+        VERSION=$(poetry version -s)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Delete existing tag if it exists
+      run: |
+        TAG="v${{ env.VERSION }}"
+        if git rev-parse "$TAG" >/dev/null 2>&1; then
+          git tag -d "$TAG"
+          git push --delete origin "$TAG"
+        fi
+      continue-on-error: true
+
+    
+
+    - name: Create new tag for version
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git tag "v${{ env.VERSION }}"
+        git push origin "v${{ env.VERSION }}"
+
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Build the package
+      run: poetry build
+
+    - name: Create GitHub release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: "v${{ env.VERSION }}"
+        release_name: "v${{ env.VERSION }}"
+        draft: false
+        prerelease: false
+
+    - name: Upload wheel file to release
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: dist/*.whl
+        asset_name: my_project_v${{ env.VERSION }}.whl
+        asset_content_type: application/octet-stream
