@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,69 +22,37 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.12'  # Specify your Python version here
+        python-version: '3.12'
 
-    - name: Install Poetry
+    - name: Install Poetry & Podman
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
         export PATH="$HOME/.local/bin:$PATH"
-    
-    - name: Install Podman
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install podman
-    
-    - name: Install poetry project dependencies
-      run: poetry install
+        sudo apt-get update && sudo apt-get -y install podman
 
-    - name: Run your command with Poetry
-      run: poetry run crzd build
-    
-    - name: Extract version from pyproject.toml
-      id: extract_version
+    - name: Install poetry project dependencies
+      run: |
+        export PATH="$HOME/.local/bin:$PATH"
+        poetry install
+
+    - name: Build the project
+      run: |
+        export PATH="$HOME/.local/bin:$PATH"
+        poetry run crzd build
+
+    - name: Extract version and create tag
+      id: version_and_tag
       run: |
         VERSION=$(grep -E '^version\s*=' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
         echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-    - name: Create and push tag
-      env:
-        VERSION: ${{ env.VERSION }}
-      run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git tag -a "v$VERSION" -m "Version $VERSION"
         git push -f origin "v$VERSION"
-    
-    - name: Delete existing GitHub release if it exists
+
+    - name: Upload artifacts to GitHub release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         VERSION: ${{ env.VERSION }}
       run: |
-        if gh release view "v$VERSION" >/dev/null 2>&1; then
-          gh release delete "v$VERSION" -y
-        else
-          echo "Release for tag v$VERSION not found, skipping delete."
-        fi
-    
-    - name: Create GitHub release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: "v${{ env.VERSION }}"
-        release_name: "v${{ env.VERSION }}"
-        draft: false
-        prerelease: false
-
-    - name: debug
-      id: ls
-      run: |
-        ls -lah .
-        ls -lah dist/
-
-    - name: Upload wheel file using GitHub CLI
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        VERSION: ${{ env.VERSION }}
-      run: gh release upload "v${VERSION}" dist/*.whl
+        gh release upload "v${VERSION}" dist/*.whl --clobber || gh release create "v${VERSION}" dist/*.whl
