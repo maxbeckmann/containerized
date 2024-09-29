@@ -82,7 +82,7 @@ containerized [-d DIRECTORY] [--shell [ENTRYPOINT]] [--prune] <base_name> [ARGS.
 The command `crzd` works identically to `containerized`, providing a more concise alias:
 
 ```sh
-crzd .shell my_containerfile
+crzd --shell my_containerfile
 ```
 
 This command runs the container using an interactive shell but uses a shorter command name for convenience.
