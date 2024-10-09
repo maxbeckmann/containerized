@@ -119,9 +119,6 @@ def build_podman_image(containerfile_path, context_directory, image_name):
 
 def run_podman_container(image_name, mount_directory, additional_args=None, entrypoint=None):
     """Runs a Podman container using subprocess, mounting the directory and passing additional arguments."""
-    
-    current_uid = os.getuid()
-    current_gid = os.getgid()
 
     run_command = [
         "podman", "run",
