@@ -75,7 +75,7 @@ def build_podman_image(containerfile_path, context_directory, image_name):
     ]
 
     # Start the build process with real-time output handling
-    proc = subprocess.Popen(build_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    proc = subprocess.Popen(build_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8',)
 
     full_output = []  # To store full output in case we need to print it all later
     cache_used = True  # Track if all steps after STEP 1 use cache
@@ -219,6 +219,7 @@ def main():
 
     except Exception as e:
         print(f"Error: {e}")
+        raise e
 
 if __name__ == "__main__":
     main()
