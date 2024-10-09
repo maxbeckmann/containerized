@@ -11,16 +11,29 @@ The initial purpose of this project was to provide a language-agnostic way to cr
 
 ## Installation
 
-To install **Containerized**, ensure you have `podman` and Python 3.12 or later installed. Use [Poetry](https://python-poetry.org/) to manage dependencies and install the project:
+To use  **Containerized**, ensure you have `podman` and Python 3.12 or later installed. 
+
+## Installing pre-packaged Version
+
+With pipx, simply run:
+```
+pipx install https://github.com/maxbeckmann/containerized/releases/download/v0.1.0/containerized-0.1.0-py3-none-any.whl
+```
+
+## Installing from Source
+
+Use [Poetry](https://python-poetry.org/) to manage dependencies and install the project:
 
 ```sh
+git clone https://github.com/maxbeckmann/containerized.git
+cd containerized
 poetry install
 ```
 
-After installation, you can use the CLI commands directly:
+After installation, you can use the CLI commands through `poetry run`:
 
-- `containerized`
-- `crzd`
+- `poetry run containerized`
+- `poetry run crzd`
 
 ## Usage Semantics
 
