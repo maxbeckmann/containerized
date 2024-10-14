@@ -4,6 +4,7 @@ import os
 import argparse
 import subprocess
 import json
+import sys
 
 def get_shell_env(image_name):
     try:
@@ -155,10 +156,7 @@ def prune_image(image_name):
 def main():
     parser = argparse.ArgumentParser(description="Build and run Podman containers from a Containerfile.")
     
-    subparsers = parser.add_subparsers(dest="command", required=True, help="Sub-command to run")
-
-    # Positional argument for the base name of the Containerfile
-    parser.add_argument("base_name", help="Base name for the .Containerfile")
+    subparsers = parser.add_subparsers(dest="command", help="Sub-command to run")
 
     # Subparser for the 'shell' command
     shell_parser = subparsers.add_parser("shell", help="Run an interactive shell in the container.")
@@ -168,6 +166,7 @@ def main():
 
     # Subparser for the 'run' command
     run_parser = subparsers.add_parser("run", help="Run the container with specified arguments.")
+    run_parser.add_argument("base_name", help="Base name for the .Containerfile")
     run_parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments to pass to the container.")
 
     # Global argument for directory
@@ -176,6 +175,11 @@ def main():
         help="Directory to search for the Containerfile and use as context. Defaults to current directory.", 
         default=os.getcwd()
     )
+
+    # Assume 'run' commmand is desired if some unknown command name is entered
+    if len(sys.argv) > 1 and sys.argv[1] not in ['shell', 'prune', 'run']:
+        # Move the base_name argument to be after the command if an unknown command is given
+        sys.argv.insert(1, "run")
 
     args = parser.parse_args()
 
