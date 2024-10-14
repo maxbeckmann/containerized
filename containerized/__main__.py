@@ -223,8 +223,9 @@ def main():
             build_podman_image(containerfile_path, directory, image_name)
             
             podman_args = []
-            for volume in args.volume:
-                podman_args += ['-v', volume]
+            if args.volume:
+                for volume in args.volume:
+                    podman_args += ['-v', volume]
 
             if args.command == "shell":
                 default_shell = get_shell_env(image_name)
