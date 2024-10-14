@@ -123,6 +123,7 @@ def run_podman_container(image_name, mount_directory, additional_podman_args=[],
 
     run_command = [
         "podman", "run",
+        "-it", # run interactively, as we assume to have a user present
         "--rm",  # Automatically remove the container after it exits
         "-v", f"{mount_directory}:/mnt",  # Mount the directory
     ]
@@ -131,8 +132,7 @@ def run_podman_container(image_name, mount_directory, additional_podman_args=[],
 
     if entrypoint:
         run_command += [
-            "--entrypoint", entrypoint, 
-            "-it"
+            "--entrypoint", entrypoint,
         ]
 
     run_command.append(image_name)  # Add the image name at the end
