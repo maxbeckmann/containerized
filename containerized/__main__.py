@@ -118,7 +118,7 @@ def build_podman_image(containerfile_path, context_directory, image_name):
             print(line, end="")
         raise RuntimeError(f"Failed to build image {image_name}.")
 
-def run_podman_container(image_name, mount_directory, additional_args=None, entrypoint=None):
+def run_podman_container(image_name, mount_directory, additional_podman_args=[], additional_args=None, entrypoint=None):
     """Runs a Podman container using subprocess, mounting the directory and passing additional arguments."""
 
     run_command = [
@@ -126,6 +126,8 @@ def run_podman_container(image_name, mount_directory, additional_args=None, entr
         "--rm",  # Automatically remove the container after it exits
         "-v", f"{mount_directory}:/mnt",  # Mount the directory
     ]
+
+    run_command += additional_podman_args
 
     if entrypoint:
         run_command += [
@@ -155,14 +157,16 @@ def prune_image(image_name):
 
 def main():
     parser = argparse.ArgumentParser(description="Build and run Podman containers from a Containerfile.")
-    
+
     subparsers = parser.add_subparsers(dest="command", help="Sub-command to run")
 
     # Subparser for the 'shell' command
     shell_parser = subparsers.add_parser("shell", help="Run an interactive shell in the container.")
+    shell_parser.add_argument("base_name", help="Base name for the .Containerfile")
 
     # Subparser for the 'prune' command
     prune_parser = subparsers.add_parser("prune", help="Prune (remove) the image.")
+    prune_parser.add_argument("base_name", help="Base name for the .Containerfile")
 
     # Subparser for the 'run' command
     run_parser = subparsers.add_parser("run", help="Run the container with specified arguments.")
@@ -176,10 +180,25 @@ def main():
         default=os.getcwd()
     )
 
+    parser.add_argument(
+        "-v", "--volume", 
+        help="Additional volume to mount (in 'source:destination' format).",
+        action='append'
+    )
+
+    command_index = 1
+    expect_arg_value = False
+    for arg in sys.argv[1:]:
+        if expect_arg_value or arg.startswith("-"):
+            command_index += 1
+            expect_arg_value = not expect_arg_value
+        else:
+            break
+
     # Assume 'run' commmand is desired if some unknown command name is entered
-    if len(sys.argv) > 1 and sys.argv[1] not in ['shell', 'prune', 'run']:
+    if len(sys.argv) > command_index and sys.argv[command_index] not in ['shell', 'prune', 'run']:
         # Move the base_name argument to be after the command if an unknown command is given
-        sys.argv.insert(1, "run")
+        sys.argv.insert(command_index, "run")
 
     args = parser.parse_args()
 
@@ -203,6 +222,10 @@ def main():
             # Step 3: Build the image
             build_podman_image(containerfile_path, directory, image_name)
             
+            podman_args = []
+            for volume in args.volume:
+                podman_args += ['-v', volume]
+
             if args.command == "shell":
                 default_shell = get_shell_env(image_name)
                 
@@ -210,10 +233,10 @@ def main():
                 if default_shell is None:
                     default_shell = "/bin/sh"
                 
-                run_podman_container(image_name, directory, entrypoint=default_shell)
+                run_podman_container(image_name, directory, additional_podman_args=podman_args, entrypoint=default_shell)
             elif args.command == "run":
                 # Step 4: Run the container with passed arguments
-                run_podman_container(image_name, directory, additional_args=args.args)
+                run_podman_container(image_name, directory, additional_podman_args=podman_args, additional_args=args.args)
 
     except Exception as e:
         print(f"Error: {e}")
