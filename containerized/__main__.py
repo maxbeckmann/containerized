@@ -155,30 +155,27 @@ def prune_image(image_name):
 def main():
     parser = argparse.ArgumentParser(description="Build and run Podman containers from a Containerfile.")
     
+    subparsers = parser.add_subparsers(dest="command", required=True, help="Sub-command to run")
+
     # Positional argument for the base name of the Containerfile
     parser.add_argument("base_name", help="Base name for the .Containerfile")
-    
+
+    # Subparser for the 'shell' command
+    shell_parser = subparsers.add_parser("shell", help="Run an interactive shell in the container.")
+
+    # Subparser for the 'prune' command
+    prune_parser = subparsers.add_parser("prune", help="Prune (remove) the image.")
+
+    # Subparser for the 'run' command
+    run_parser = subparsers.add_parser("run", help="Run the container with specified arguments.")
+    run_parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments to pass to the container.")
+
     # Global argument for directory
     parser.add_argument(
         "-d", "--directory", 
         help="Directory to search for the Containerfile and use as context. Defaults to current directory.", 
         default=os.getcwd()
     )
-
-    # Flag for shell mode
-    parser.add_argument(
-        "--shell", action="store_true",
-        help="Run an interactive shell in the container."
-    )
-
-    # Subcommand: prune (to remove the image)
-    parser.add_argument(
-        "--prune", action="store_true", 
-        help="Prune (remove) the image created by the tool."
-    )
-
-    # Additional arguments to pass to the container
-    parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments to pass to the container.")
 
     args = parser.parse_args()
 
@@ -195,15 +192,14 @@ def main():
         # Step 2: Generate the image name
         image_name = get_image_name(args.base_name)
         
-        if args.prune:
+        if args.command == "prune":
             # Prune (remove) the image
             prune_image(image_name)
         else:
             # Step 3: Build the image
             build_podman_image(containerfile_path, directory, image_name)
             
-            # Step 4: Run the container with the optional shell flag or passed arguments
-            if args.shell:
+            if args.command == "shell":
                 default_shell = get_shell_env(image_name)
                 
                 # assume sh as a sane default if nothing else is specified
@@ -211,7 +207,8 @@ def main():
                     default_shell = "/bin/sh"
                 
                 run_podman_container(image_name, directory, entrypoint=default_shell)
-            else:
+            elif args.command == "run":
+                # Step 4: Run the container with passed arguments
                 run_podman_container(image_name, directory, additional_args=args.args)
 
     except Exception as e:
