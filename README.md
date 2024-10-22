@@ -17,7 +17,7 @@ To use  **Containerized**, ensure you have `podman` and Python 3.12 or later ins
 
 With pipx, simply run:
 ```
-pipx install https://github.com/maxbeckmann/containerized/releases/download/v0.1.0/containerized-0.1.0-py3-none-any.whl
+pipx install https://github.com/maxbeckmann/containerized/releases/download/v0.2.0/containerized-0.2.0-py3-none-any.whl
 ```
 
 ## Installing from Source
