@@ -40,29 +40,33 @@ After installation, you can use the CLI commands through `poetry run`:
 The **Containerized** CLI provides a simple and flexible interface for interacting with Podman containers. Below is a detailed breakdown of how to use it:
 
 ```sh
-containerized [-d DIRECTORY] [--shell [ENTRYPOINT]] [--prune] <base_name> [ARGS...]
+containerized [-h] [-d DIRECTORY] [-v VOLUME] [shell,prune,run] <base_name>
 ```
 
 ### Arguments and Flags
-
-- `<base_name>` (required): The base name for the `.Containerfile` to be used.
-  - The tool will look for a file named `<base_name>.Containerfile` in the specified or current directory.
   
 - `-d`, `--directory` (optional): 
   - Specifies the directory to search for the `Containerfile` and use as the build context.
   - Defaults to the current working directory if not specified.
 
-- `--shell [ENTRYPOINT]` (optional):
-  - Runs an interactive shell within the container.
-  - The default entry point is `/bin/sh`. You can optionally specify a different entry point if needed.
+- `-v`, `--volume VOLUME` (optional):
+  - Additional volume to mount (in 'source:destination' format).
 
-- `--prune` (optional):
-  - Removes the built image after the container stops running.
-  - Useful for maintaining a clean environment and saving storage space.
+- `<base_name>` (required): The base name for the `.Containerfile` to be used.
+  - The tool will look for a file named `<base_name>.Containerfile` in the specified or current directory.
 
-- `ARGS...` (optional):
-  - Any additional arguments to be passed to the container when it is run.
-  - This allows for flexible command execution inside the container.
+- Sub-Commands:
+  - `shell <base_name>`:
+    - Runs an interactive shell within the container.
+    - The default entry point is `/bin/sh`. You can optionally specify a different entry point if needed.
+
+  - `prune <base_name>`:
+    - Removes the built image after the container stops running.
+    - Useful for maintaining a clean environment and saving storage space.
+
+  - `<base_name>` short for `run <base_name>`:
+    - Any additional arguments to be passed to the container when it is run.
+    - This allows for flexible command execution inside the container.
 
 ### Example Scenarios
 
@@ -74,7 +78,7 @@ containerized [-d DIRECTORY] [--shell [ENTRYPOINT]] [--prune] <base_name> [ARGS.
 
 2. **Run an Interactive Shell in the Container**:
    ```sh
-   containerized --shell my_containerfile
+   containerized shell my_containerfile
    ```
    This opens an interactive shell within the built container. It’s ideal for troubleshooting or exploring the container interactively.
 
@@ -86,7 +90,7 @@ containerized [-d DIRECTORY] [--shell [ENTRYPOINT]] [--prune] <base_name> [ARGS.
 
 4. **Prune the Image After Use**:
    ```sh
-   containerized --prune my_containerfile
+   containerized prune my_containerfile
    ```
    This removes the built container image after running, helping to save disk space.
 
@@ -95,7 +99,7 @@ containerized [-d DIRECTORY] [--shell [ENTRYPOINT]] [--prune] <base_name> [ARGS.
 The command `crzd` works identically to `containerized`, providing a more concise alias:
 
 ```sh
-crzd --shell my_containerfile
+crzd shell my_containerfile
 ```
 
 This command runs the container using an interactive shell but uses a shorter command name for convenience.
