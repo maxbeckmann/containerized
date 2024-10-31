@@ -120,7 +120,7 @@ def build_podman_image(containerfile_path, context_directory, image_name):
             print(line, end="")
         raise RuntimeError(f"Failed to build image {image_name}.")
 
-def run_podman_container(image_name, mount_directory, additional_podman_args=[], additional_args=None, entrypoint=None):
+def run_podman_container(image_name, mount_directory, additional_podman_args=[], additional_args=None, entrypoint=None, dry_run=False):
     """Runs a Podman container using subprocess, mounting the directory and passing additional arguments."""
 
     run_command = [
@@ -142,9 +142,13 @@ def run_podman_container(image_name, mount_directory, additional_podman_args=[],
     if additional_args:
         run_command += additional_args
     
-    # Execute the Podman run command
-    print(f"{mount_directory} is mounted at /mnt")
-    subprocess.run(run_command)
+    if dry_run:
+        print(" ".join(run_command))
+        return
+    else:
+        # Execute the Podman run command
+        print(f"{mount_directory} is mounted at /mnt")
+        subprocess.run(run_command)
 
 def prune_image(image_name):
     """Prunes (removes) the Podman image."""
@@ -195,12 +199,15 @@ def main():
         action='append'
     )
 
+    parser.add_argument("--dry-run", action='store_true', help="Print commands instead of executing them.")
+
     command_index = 1
     expect_arg_value = False
     for arg in sys.argv[1:]:
         if expect_arg_value or arg.startswith("-"):
             command_index += 1
-            expect_arg_value = not expect_arg_value
+            if arg != "--dry-run":
+                expect_arg_value = not expect_arg_value
         else:
             break
 
@@ -228,8 +235,9 @@ def main():
             # Prune (remove) the image
             prune_image(image_name)
         else:
-            # Step 3: Build the image
-            build_podman_image(containerfile_path, directory, image_name)
+            # Step 3: Build the image, if this not a dry-run
+            if not args.dry_run:
+                build_podman_image(containerfile_path, directory, image_name)
             
             podman_args = []
             if args.volume:
@@ -250,10 +258,10 @@ def main():
                 if default_shell is None:
                     default_shell = "/bin/sh"
                 
-                run_podman_container(image_name, directory, additional_podman_args=podman_args, entrypoint=default_shell)
+                run_podman_container(image_name, directory, additional_podman_args=podman_args, entrypoint=default_shell, dry_run=args.dry_run)
             elif args.command == "run":
                 # Step 4: Run the container with passed arguments
-                run_podman_container(image_name, directory, additional_podman_args=podman_args, additional_args=args.args)
+                run_podman_container(image_name, directory, additional_podman_args=podman_args, additional_args=args.args, dry_run=args.dry_run)
 
     except Exception as e:
         print(f"Error: {e}")
