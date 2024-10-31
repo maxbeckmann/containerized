@@ -5,6 +5,8 @@ import argparse
 import subprocess
 import json
 import sys
+from pathlib import Path, PurePosixPath
+
 
 def get_shell_env(image_name):
     try:
@@ -186,6 +188,13 @@ def main():
         action='append'
     )
 
+    # New shorthand for multiple home mounts
+    parser.add_argument(
+        "-vh", "--home-volume",
+        help="Mount specified subdirectories of the user's home directory to the container's /home directory.",
+        action='append'
+    )
+
     command_index = 1
     expect_arg_value = False
     for arg in sys.argv[1:]:
@@ -195,7 +204,7 @@ def main():
         else:
             break
 
-    # Assume 'run' commmand is desired if some unknown command name is entered
+    # Assume 'run' command is desired if some unknown command name is entered
     if len(sys.argv) > command_index and sys.argv[command_index] not in ['shell', 'prune', 'run']:
         # Move the base_name argument to be after the command if an unknown command is given
         sys.argv.insert(command_index, "run")
@@ -226,11 +235,18 @@ def main():
             if args.volume:
                 for volume in args.volume:
                     podman_args += ['-v', volume]
+            
+            if args.home_volume:
+                home_dir = Path.home()  # Get the user's home directory cross-platform
+                for subdir in args.home_volume:
+                    source_path = home_dir / subdir  # Local path (OS-native)
+                    container_path = PurePosixPath("/root") / subdir  # Always use Linux-style paths
+                    podman_args += ['-v', f"{source_path}:{container_path}"]
 
             if args.command == "shell":
                 default_shell = get_shell_env(image_name)
                 
-                # assume sh as a sane default if nothing else is specified
+                # Assume sh as a sane default if nothing else is specified
                 if default_shell is None:
                     default_shell = "/bin/sh"
                 
