@@ -130,3 +130,6 @@ Contributions are welcome! If you'd like to add features or fix issues, please:
 
 ## Future Improvement
 - Explore use in Github Actions to facilitate portable building and deployment of projects
+
+## Similar Projects
+- https://github.com/containers/toolbox
