@@ -73,6 +73,7 @@ def build_podman_image(containerfile_path, context_directory, image_name):
     build_command = [
         "podman", "build", 
         "-f", containerfile_path,  # Path to Containerfile
+	"--volume", f"{context_directory}:/mnt",   # Mount project folder
         "-t", image_name,       # Tag for the image
         context_directory       # Context directory
     ]
